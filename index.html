@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="initial-scale=1,maximum-scale=1, minimum-scale=1">
+		<title></title>
+		<script type="text/javascript" src="js/three.js" ></script>
+		<script type="text/javascript" src="js/OBJLoader.js" ></script>
+		<script type="text/javascript" src="js/tween.js" ></script>
+		<script type="text/javascript" src="js/GPUParticleSystem.js" ></script>
+		<script type="text/javascript" src="js/AnimationMixer.js" ></script>
+		<script type="text/javascript" src="js/ObjectLoader.js" ></script>
+	</head>
+	<style>
+	    body,html{width: 100%;height: 100%;margin: 0;padding: 0;overflow: hidden;}
+	    @font-face {
+	    	font-family: "agency fb";
+	    	src: url('css/AgencyFB.ttf');
+	    }
+		#world{
+			width: 100%;
+			height: 100%;
+			background-color: #000;
+		}
+		#progress{
+			position: absolute;
+			width: 120px;
+			height: 60px;
+			top: 50%;
+			left: 50%;
+			font-size: 50px;
+			margin:-30px 0 0 -73px;
+			font-family:  "agency fb";
+			color: white;
+			overflow: hidden;
+			display: none;
+			animation: load 1.5s linear infinite;
+		}
+		@keyframes load{
+			0%{}
+			50%{width: 136px;}
+			100%{width: 146px;}
+		}
+		#snow{
+			font-family: "agency fb";
+			font-size: 40px;
+			color: white;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: 302px;
+			height: 100px;
+			margin: -50px 0 0 -151px;
+			z-index: 10;
+		}
+		#ask{
+			opacity: 0;
+			font-size: 28px;
+			text-align: center;
+		}
+		@keyframes showAndHide{
+			0%{opacity: 0;}
+			50%{opacity: 1;}
+			100%{opacity: 0;}
+		}
+		.showAndHide{
+			animation: showAndHide 4s linear forwards;
+		}
+	    #btn{
+	    	cursor: pointer;
+	    	margin-top: -20px;
+	    	text-align: center;
+	    	opacity: 0;
+	    }
+	    #btn span{
+	    	display: inline-block;
+	    	background-color: white;
+	    	color: black;
+	    	padding: 0px 15px;
+	    	border-radius: 5px;
+	    }
+	    @keyframes show{
+	    	from{opacity: 0;}
+	    	to{opacity: 1;}
+	    }
+	    .show{
+	    	animation: show 2s 4s linear forwards;
+	    }
+	    .words{
+	    	width: 340px;
+	    	height: 30px;
+	    	line-height: 30px;
+	    	background-color: white;
+	    	white-space: nowrap;
+	    	position: absolute;
+	    	left: 50%;
+	        bottom: 30%;
+	        margin-bottom: -15px;
+	        margin-left: -170px;
+	        padding: 10px 0;
+	        border-radius: 4px;
+	        font-family: "microsoft yahei";
+	        text-align: center;
+	        font-size: 20px;
+            opacity: 0;
+	    }
+	    .mxs{
+	    	bottom: 50%;
+	    	z-index: 1;
+	    }
+	    .mxs span{
+	    	display: inline-block;
+	    	width: 20px;
+	    	height: 20px;
+	    }
+	    .mxs img{
+	    	display: block;
+	    	width: 20px;
+	    	height: 20px;
+	    	cursor: pointer;
+	    }
+	</style>
+	<body>
+		<div id="world">
+			<!--画布-->
+		</div>
+		<div id="progress">
+			Loading...
+		</div>
+		<div id="snow">
+			<div id="ask">
+			  Do you want to build a snowman ?
+			</div>
+			<div id="btn">
+			  <span>Yes!</span>
+			</div>
+		</div>
+		<div id="snowWords1" class="words">
+			Hi, I'm Jelly and I like warm hugs. 
+		</div>
+		<div id="snowWords2" class="words">
+			Why I have only one eye?  
+		</div>
+		<div id="snowWords3" class="words">
+			Eh..My right eye is white...
+		</div>
+		<div id="snowWords4" class="words">
+			Thank you for creating me !
+		</div>
+		<div id="snowWords5" class="words">
+			Now,let me show you something.
+		</div>
+		<div id="mxs" class="words mxs">
+			Merry Christmas ! ^ - ^ <span><img id="github" src="img/github.png"/></span>
+		</div>
+		<script>
+			var scene,
+			camera,
+			renderer,
+			snow;
+			var particleSystem,
+			    mixer;
+			var tick = 0;
+			var clock = new THREE.Clock(true);
+			var clock2 = new THREE.Clock();
+			/*初始化场景*/
+			scene = new THREE.Scene();
+		    camera = new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,10000);
+			camera.position.set(0,30,-50);
+			camera.lookAt(new THREE.Vector3(0,10,0));
+		    renderer = new THREE.WebGLRenderer({alpha:true,antialias:true});
+		    renderer.setSize(window.innerWidth,window.innerHeight);
+		    renderer.shadowMapEnabled = true;
+		    var container =  document.getElementById('world');
+		    container.appendChild(renderer.domElement);
+		    window.addEventListener('resize',onWindowResize,false);
+		    function onWindowResize(){
+	           WIDTH=window.innerWidth;
+	           HEIGHT=window.innerHeight;
+               renderer.setSize(WIDTH, HEIGHT);
+               camera.aspect = WIDTH / HEIGHT;
+               camera.updateProjectionMatrix();
+            }
+		    /*定义loading*/
+		    var onProgress = function(){
+		    	var pro = document.getElementById('progress');
+		    	pro.style.display = 'block';
+		    }
+		    /*载入圣诞树*/
+		    var loader2 = new THREE.OBJLoader();
+			 loader2.load('./img/tree2.obj',function( obj ){
+			   var buffer = obj.children[0].geometry;
+			   var loader3 = new THREE.TextureLoader();
+			   textureL = loader3.load('./img/glow.png');
+			   matL = new THREE.PointsMaterial({
+			   	color: 0xffffff,
+			   	size: 5,
+			   	transparent: true,
+			   	map: textureL,
+			   	opacity: 0
+			   });
+			   var tree = new THREE.Points(buffer,matL);
+			   tree.scale.set(0.5,0.5,0.5);
+			/*导入blender场景*/
+			   var loader = new THREE.ObjectLoader();
+		    loader.load('./img/snowman01.json',function( loadedScene ){
+		      sceneAnimationClip = loadedScene.animations[0];
+		      tween = [];
+		      for(var i = 0;i <22;i++){
+                (function(num){
+                	loadedScene.children[i].scale.set(0.0001,0.0001,0.0001);
+                	tween[i] = new TWEEN.Tween(loadedScene.children[i].scale).to({
+                	   x: 1,y: 1,z: 1 	
+                	},8000).delay(3000);
+                	loadedScene.children[i].material
+                }(i));
+		      }
+		      scene = loadedScene;
+		      scene.add(camera);	
+		      var ambient = new THREE.AmbientLight( 0x444444 );
+		      ambient.intensity = 3;
+			  scene.add( ambient );
+			  var directionalLight = new THREE.DirectionalLight( 0xffeedd );
+			  directionalLight.position.set( -10, 0, -10 );
+			  scene.add( directionalLight );
+			  /*载入圣诞树*/
+			  /*顶部雪花*/
+		      particleSystem = new THREE.GPUParticleSystem({
+			    maxParticles: 150000
+			  });
+			  /*落雪*/
+			   /*雪花材料*/
+			  var loader = new THREE.TextureLoader();
+              texture = loader.load("./img/snow.png");
+              geom = new THREE.Geometry();
+              var material = new THREE.PointsMaterial({
+                size: .4,
+                transparent: true,
+                opacity: 1,
+                map: texture,
+                color: 0xffffff
+              });
+                /*雪花几何*/
+              var range = 15;
+              for (var i = 0; i < 5000; i++) {
+                var particle = new THREE.Vector3(
+                        1.2*Math.random() * range,
+                        2*Math.random() * range,
+                        Math.random() * range
+                );
+                particle.velocityY = .2;
+                particle.velocityX = 20;
+                geom.vertices.push(particle);
+              }
+              snow = new THREE.Points(geom, material);
+              snow.scale.y = 0.1;
+              snow.position.set(-9,58,1);
+              snow.rotation.x = Math.PI/12;
+			  /*定义帧动画处理器*/
+		   	  mixer = new THREE.AnimationMixer(scene);
+		   	  mixer.clipAction(sceneAnimationClip).loop = false;
+		   	  
+		   	  /*制作对话*/
+		   	  var pro = document.getElementById('progress');
+		      pro.style.display = 'none';
+			  var ask = document.getElementById('ask');
+			  ask.className = 'showAndHide';
+			  var btn = document.getElementById('btn');
+			  btn.className = 'show';
+			  btn.addEventListener('click',function(){
+			  	btn.style.display = 'none';
+			  	scene.add( particleSystem);
+                var tween2 = new TWEEN.Tween(snow.scale).to({y:-1},5000).start();
+			    scene.add(snow);
+			    tween2.chain.apply(null,tween);
+			    tween[0].onComplete(function(){
+                  mixer.clipAction(sceneAnimationClip).play();
+                  var sentence1 = document.getElementById('snowWords1');
+			      var sentence2 = document.getElementById('snowWords2');
+			      var sentence3 = document.getElementById('snowWords3');
+			      var sentence4 = document.getElementById('snowWords4');
+			      var sentence5 = document.getElementById('snowWords5');
+                  tweenWords1 = new TWEEN.Tween(sentence1.style).to({opacity:1},100).delay(2500);			    
+			      tweenWords2 = new TWEEN.Tween(sentence2.style).to({opacity:1},100).delay(2500);
+			      tweenWords3 = new TWEEN.Tween(sentence3.style).to({opacity:1},100).delay(2500);
+			      tweenWords4 = new TWEEN.Tween(sentence4.style).to({opacity:1},100).delay(2500);
+			      tweenWords5 = new TWEEN.Tween(sentence5.style).to({opacity:1},100).delay(2500);
+			      tweenWords6 = new TWEEN.Tween(sentence5.style).to({opacity:1},100).delay(2500);
+			      tweenCamera = new TWEEN.Tween(camera.position).to({z:-250,y:200},5000); 
+			      tweenLight = new TWEEN.Tween(matL).to({opacity:1},4000);
+			      tweenTwinkleHide = new TWEEN.Tween(matL).to({opacity:0},500);
+			      tweenTwinkle = new TWEEN.Tween(matL).to({opacity:1},500);
+			      tweenWords1.chain(tweenWords2);
+			      tweenWords2.chain(tweenWords3);
+			      tweenWords3.chain(tweenWords4);
+			      tweenWords4.chain(tweenWords5);
+			      tweenWords5.chain(tweenWords6);
+			      tweenWords6.chain(tweenCamera);
+			      tweenCamera.chain(tweenLight);
+			      tweenLight.chain(tweenTwinkleHide);
+			      tweenTwinkleHide.chain(tweenTwinkle);
+			      tweenTwinkle.chain(tweenTwinkleHide);
+			      tweenTwinkle.onComplete(function(){
+			      	var mxs = document.getElementById('mxs');
+			      	mxs.style.opacity = 1;
+			      	mxs.style.zIndex = 11;
+			      	var github = document.getElementById('github');
+			      	github.onclick = function(){
+			      		console.log('a');
+			      		window.open('https://github.com/johanzhu');
+			        }
+			      });
+			      tweenWords1.delay(5000).start();
+			      tweenWords6.onComplete(function(){
+			      	sentence1.style.opacity = 0;
+			      	sentence2.style.opacity = 0;
+			      	sentence3.style.opacity = 0;
+			      	sentence4.style.opacity = 0;
+			      	sentence5.style.opacity = 0;
+			      	tree.position.z = 100;
+			      	tree.position.y = -100;
+			      	scene.add(tree);
+			      })
+			    });
+			  });
+			  animate();
+		    });
+			   
+	    },onProgress)
+		    
+		    
+		/*blender场景导入完毕*/
+		/*雪花参数*/
+	    var options = {
+				position: new THREE.Vector3(),
+				positionRandomness: .3,
+				velocity: new THREE.Vector3(),
+				velocityRandomness: .5,
+				color: 0xffffff,
+				colorRandomness: .2,
+				turbulence: 0,
+				lifetime: 1,
+				size: 5,
+				sizeRandomness: 1
+			};
+	    var spawnerOptions = {
+				spawnRate: 25000,
+				horizontalSpeed: 2.5,
+				verticalSpeed: 2.5,
+				timeScale: 1
+			};
+		/*渲染函数*/	
+		function animate(){
+		  requestAnimationFrame(animate);
+		  var delta = clock.getDelta() * spawnerOptions.timeScale;
+		  tick += delta;
+          if (tick < 0) tick = 0;
+          if (delta > 0) {
+				options.position.x = Math.sin(tick * spawnerOptions.horizontalSpeed) * 8;
+				options.position.y = 29;
+				options.position.z = Math.cos(tick * spawnerOptions.verticalSpeed) * 8;
+				for (var x = 0; x < spawnerOptions.spawnRate * delta; x++) {
+					particleSystem.spawnParticle(options);
+				}
+			}
+          particleSystem.update(tick);
+		  render();
+		}
+		function render(){
+		 TWEEN.update();
+		 var delta = clock2.getDelta();
+	        if(mixer){
+	        	mixer.update(delta);
+	        }
+	     /*使雪花下落*/
+	     var vertices = snow.geometry.vertices;
+             vertices.forEach(function (v) {
+                v.y =  v.y + (v.velocityY);
+                if (v.y >= 60) v.y = 30;
+            });
+         geom.verticesNeedUpdate = true;
+	     renderer.render(scene,camera);
+        }
+		
+		</script>
+	</body>
+</html>
